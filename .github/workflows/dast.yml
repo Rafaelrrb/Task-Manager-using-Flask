@@ -47,7 +47,9 @@ jobs:
           docker run --rm \
             --network zap-net \
             -v $(pwd)/zap_reports:/home/zap/:rw \
+            -v $(pwd)/zap_reports:/zap/wrk:rw \
             ghcr.io/zaproxy/zaproxy:stable zap-baseline.py \
             -t http://flask-app:5000 \
             -J /home/zap/report_json.json \
-            -w /home/zap/zap_warnings.html
+            -w /home/zap/report.md \
+            -r /home/zap/report.html

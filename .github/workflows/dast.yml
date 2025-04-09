@@ -22,7 +22,7 @@ jobs:
 
       - name: Construir imagem da aplicação Flask
         run: |
-          docker build -t flask-app ./todo_project
+          docker build -t flask-app .
 
       - name: Subir aplicação Flask em background
         run: |
@@ -33,7 +33,7 @@ jobs:
         uses: zaproxy/action-baseline@v0.10.0
         with:
           target: 'http://localhost:5000'
-          cmd_options: '-a' # modo agressivo
+          cmd_options: '-a'
 
       - name: Encerrar container
         run: docker stop app

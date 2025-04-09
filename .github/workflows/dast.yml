@@ -17,43 +17,21 @@ jobs:
       - name: Build da imagem Flask
         run: docker build -t flask-app .
 
-      - name: Salvar imagem para usar como serviço
+      - name: Subir aplicação Flask em background
         run: |
-          docker save flask-app > flask-app.tar
+          docker run -d --rm --name flask-app -p 5000:5000 flask-app
 
-      - name: Carregar imagem no contexto do serviço
-        uses: actions/upload-artifact@v4
-        with:
-          name: flask-image
-          path: flask-app.tar
-
-  zap:
-    runs-on: ubuntu-latest
-
-    needs: dast
-
-    services:
-      flask-app:
-        image: flask-app:latest
-        ports:
-          - 5000:5000
-        options: >-
-          --health-cmd "curl http://localhost:5000 || exit 1"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-    steps:
-      - name: Checkout do código
-        uses: actions/checkout@v3
-
-      - name: Baixar imagem Flask
-        uses: actions/download-artifact@v4
-        with:
-          name: flask-image
-
-      - name: Carregar imagem Flask no Docker
-        run: docker load < flask-app.tar
+      - name: Esperar o Flask estar disponível
+        run: |
+          echo "Esperando a aplicação responder..."
+          for i in {1..10}; do
+            if curl -s http://localhost:5000 > /dev/null; then
+              echo "Flask está rodando!"
+              break
+            fi
+            echo "Tentativa $i falhou, tentando novamente em 3 segundos..."
+            sleep 3
+          done
 
       - name: Criar pasta de relatórios com permissões adequadas
         run: |
@@ -63,9 +41,10 @@ jobs:
       - name: Rodar ZAP Scan contra o app Flask
         run: |
           docker run --rm \
+            --network="host" \
             -v $(pwd)/zap_reports:/zap/wrk/:rw \
             ghcr.io/zaproxy/zaproxy:stable zap-baseline.py \
-            -t http://flask-app:5000 \
+            -t http://localhost:5000 \
             -J report_json.json \
             -w report_md.md \
             -r report_html.html \

@@ -27,7 +27,7 @@ jobs:
       - name: Verificar se o Flask está respondendo
         run: |
           echo "Esperando o Flask responder..."
-          for i in {1..10}; do
+          for i in {1..20}; do
             if docker run --rm --network zap-net curlimages/curl:latest curl -s http://flask-app:5000 > /dev/null; then
               echo "Flask está online!"
               break
@@ -39,20 +39,15 @@ jobs:
       - name: Criar pasta de relatórios
         run: mkdir -p zap_reports
 
+      - name: Ajustar permissões do diretório de relatórios
+        run: chmod -R 777 zap_reports
+
       - name: Rodar ZAP apontando para o flask-app
         run: |
           docker run --rm \
             --network zap-net \
-            -v $(pwd)/zap_reports:/zap/wrk/:rw \
+            -v $(pwd)/zap_reports:/home/zap/:rw \
             ghcr.io/zaproxy/zaproxy:stable zap-baseline.py \
             -t http://flask-app:5000 \
-            -J report_json.json \
-            -w report_md.md \
-            -r report_html.html \
-            -a
-
-      - name: Upload do relatório HTML
-        uses: actions/upload-artifact@v4
-        with:
-          name: zap-report
-          path: zap_reports/report_html.html
+            -J /home/zap/report_json.json \
+            -w /home/z

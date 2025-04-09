@@ -22,7 +22,7 @@ jobs:
 
       - name: Subir aplicação Flask na rede zap-net
         run: |
-          docker run -d --rm --name flask-app --network zap-net flask-app
+          docker run -d --rm --name flask-app --network zap-net -p 5000:5000 flask-app
 
       - name: Verificar se o Flask está respondendo
         run: |

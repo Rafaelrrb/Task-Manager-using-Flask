@@ -20,20 +20,33 @@ jobs:
       - name: Checkout do código
         uses: actions/checkout@v3
 
+      - name: Criar rede Docker personalizada
+        run: docker network create zap-net
+
       - name: Construir imagem da aplicação Flask
-        run: |
-          docker build -t flask-app .
+        run: docker build -t flask-app .
 
-      - name: Subir aplicação Flask em background
+      - name: Subir aplicação Flask em background na rede zap-net
         run: |
-          docker run -d -p 5000:5000 --name app flask-app
-          sleep 10  # espera a aplicação subir
+          docker run -d --network zap-net --name flask-app flask-app
+          sleep 10
 
-      - name: Rodar ZAP Scan
-        uses: zaproxy/action-baseline@v0.10.0
+      - name: Rodar ZAP Scan na mesma rede
+        run: |
+          docker run --rm --network zap-net \
+            -v $(pwd):/zap/wrk/:rw \
+            ghcr.io/zaproxy/zaproxy:stable zap-baseline.py \
+            -t http://flask-app:5000 \
+            -J report_json.json \
+            -w report_md.md \
+            -r report_html.html \
+            -a
+
+      - name: Upload do relatório HTML
+        uses: actions/upload-artifact@v4
         with:
-          target: 'http://localhost:5000'
-          cmd_options: '-a'
+          name: zap-report
+          path: report_html.html
 
-      - name: Encerrar container
-        run: docker stop app
+      - name: Encerrar container do Flask
+        run: docker stop flask-app

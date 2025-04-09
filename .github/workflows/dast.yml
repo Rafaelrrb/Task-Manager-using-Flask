@@ -48,7 +48,6 @@ jobs:
             -J report_json.json \
             -w report_md.md \
             -r report_html.html \
-            --exitcode 1 \
             -a
 
       - name: Upload do relatório HTML

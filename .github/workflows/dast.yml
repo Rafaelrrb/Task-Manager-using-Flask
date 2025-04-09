@@ -22,7 +22,12 @@ jobs:
 
       - name: Subir aplicação Flask na rede zap-net
         run: |
-          docker run -d --rm --name flask-app --network zap-net -p 5000:5000 flask-app
+          docker run --name flask-app --network zap-net -p 5000:5000 flask-app
+
+      - name: Exibir logs do container Flask após criação
+        run: |
+          echo "Exibindo logs do Flask..."
+          docker logs flask-app
 
       - name: Verificar se o Flask está respondendo
         run: |
@@ -35,11 +40,6 @@ jobs:
             echo "Tentativa $i falhou, tentando novamente..."
             sleep 5
           done
-
-      - name: Exibir logs do container Flask
-        run: |
-          echo "Exibindo logs do Flask..."
-          docker logs flask-app
 
       - name: Criar pasta de relatórios
         run: mkdir -p zap_reports

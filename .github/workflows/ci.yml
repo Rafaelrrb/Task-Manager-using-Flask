@@ -33,4 +33,4 @@ jobs:
 
       - name: Rodar os testes
         run: |
-          PYTHONPATH=. pytest -v
+          PYTHONPATH=todo_project pytest -v

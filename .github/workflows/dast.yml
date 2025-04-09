@@ -33,8 +33,13 @@ jobs:
               break
             fi
             echo "Tentativa $i falhou, tentando novamente..."
-            sleep 3
+            sleep 5
           done
+
+      - name: Exibir logs do container Flask
+        run: |
+          echo "Exibindo logs do Flask..."
+          docker logs flask-app
 
       - name: Criar pasta de relatórios
         run: mkdir -p zap_reports

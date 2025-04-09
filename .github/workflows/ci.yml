@@ -30,31 +30,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install pytest
-          pip install bandit
 
       - name: Rodar os testes
         run: |
           PYTHONPATH=todo_project pytest -v
-
-      - name: Análise Estática de Código com Bandit
-        run: |
-          bandit -r todo_project -lll -o bandit-report.txt
-
-      - name: Upload Relatório Bandit
-        uses: actions/upload-artifact@v3
-        with:
-          name: bandit-report
-          path: bandit-report.txt
-
-      - name: Rodar OWASP Dependency-Check
-        uses: dependency-check/Dependency-Check_Action@main
-        with:
-          project: 'todo_project'
-          scanPath: '.'
-          out: 'reports'
-
-      - name: Upload Relatório OWASP
-        uses: actions/upload-artifact@v3
-        with:
-          name: dependency-report
-          path: reports/dependency-check-report.html

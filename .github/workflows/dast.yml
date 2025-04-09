@@ -44,12 +44,13 @@ jobs:
 
       - name: Rodar ZAP apontando para o flask-app
         run: |
+          flask_ip=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' flask-app)
           docker run --rm \
             --network zap-net \
             -v $(pwd)/zap_reports:/home/zap/:rw \
             -v $(pwd)/zap_reports:/zap/wrk:rw \
             ghcr.io/zaproxy/zaproxy:stable zap-baseline.py \
-            -t http://flask-app:5000 \
+            -t http://$flask_ip:5000 \
             -J /home/zap/report_json.json \
             -w /home/zap/report.md \
             -r /home/zap/report.html

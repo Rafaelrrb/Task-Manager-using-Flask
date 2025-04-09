@@ -14,24 +14,22 @@ jobs:
       - name: Checkout do código
         uses: actions/checkout@v3
 
-      - name: Criar rede Docker personalizada
-        run: docker network create zap-net
-
       - name: Construir imagem da aplicação Flask
         run: docker build -t flask-app .
 
-      - name: Subir aplicação Flask em background na rede zap-net
+      - name: Subir aplicação Flask em background
         run: |
-          docker run -d --rm --network zap-net --name flask-app flask-app
+          docker run -d --rm --name flask-app -p 5000:5000 flask-app
 
       - name: Verificar se o Flask está respondendo
         run: |
+          echo "Aguardando a aplicação Flask responder..."
           for i in {1..10}; do
-            if docker run --rm --network zap-net curlimages/curl http://flask-app:5000; then
-              echo "Flask pronto!"
+            if curl -s http://localhost:5000 > /dev/null; then
+              echo "Flask está rodando!"
               break
             fi
-            echo "Aguardando o Flask subir..."
+            echo "Tentando novamente ($i)..."
             sleep 3
           done
 
@@ -40,15 +38,17 @@ jobs:
           mkdir -p zap_reports
           chmod 777 zap_reports
 
-      - name: Rodar ZAP Scan na mesma rede
+      - name: Rodar ZAP Scan contra o app Flask
         run: |
-          docker run --rm --network zap-net \
+          docker run --rm \
+            --network="host" \
             -v $(pwd)/zap_reports:/zap/wrk/:rw \
             ghcr.io/zaproxy/zaproxy:stable zap-baseline.py \
-            -t http://flask-app:5000 \
+            -t http://localhost:5000 \
             -J report_json.json \
             -w report_md.md \
             -r report_html.html \
+            --exitcode 1 \
             -a
 
       - name: Upload do relatório HTML

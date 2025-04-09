@@ -14,37 +14,38 @@ jobs:
       - name: Checkout do código
         uses: actions/checkout@v3
 
+      - name: Criar rede Docker
+        run: docker network create zap-net
+
       - name: Build da imagem Flask
         run: docker build -t flask-app .
 
-      - name: Subir aplicação Flask em background
+      - name: Subir aplicação Flask na rede zap-net
         run: |
-          docker run -d --rm --name flask-app -p 5000:5000 flask-app
+          docker run -d --rm --name flask-app --network zap-net flask-app
 
-      - name: Esperar o Flask estar disponível
+      - name: Verificar se o Flask está respondendo
         run: |
-          echo "Esperando a aplicação responder..."
+          echo "Esperando o Flask responder..."
           for i in {1..10}; do
-            if curl -s http://localhost:5000 > /dev/null; then
-              echo "Flask está rodando!"
+            if docker run --rm --network zap-net curlimages/curl:latest curl -s http://flask-app:5000 > /dev/null; then
+              echo "Flask está online!"
               break
             fi
-            echo "Tentativa $i falhou, tentando novamente em 3 segundos..."
+            echo "Tentativa $i falhou, tentando novamente..."
             sleep 3
           done
 
-      - name: Criar pasta de relatórios com permissões adequadas
-        run: |
-          mkdir -p zap_reports
-          chmod 777 zap_reports
+      - name: Criar pasta de relatórios
+        run: mkdir -p zap_reports
 
-      - name: Rodar ZAP Scan contra o app Flask
+      - name: Rodar ZAP apontando para o flask-app
         run: |
           docker run --rm \
-            --network="host" \
+            --network zap-net \
             -v $(pwd)/zap_reports:/zap/wrk/:rw \
             ghcr.io/zaproxy/zaproxy:stable zap-baseline.py \
-            -t http://localhost:5000 \
+            -t http://flask-app:5000 \
             -J report_json.json \
             -w report_md.md \
             -r report_html.html \

@@ -7,56 +7,34 @@ on:
     branches: [main, develop, staging]
 
 jobs:
-  dast:
+  build-and-scan:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout do código
+      - name: Checar código do repositório
         uses: actions/checkout@v3
 
-      - name: Criar rede Docker
-        run: docker network create zap-net
+      - name: Configurar Docker
+        run: sudo apt-get install docker.io
 
-      - name: Build da imagem Flask
-        run: docker build -t flask-app .
+      - name: Build Docker image
+        run: docker build -t my-flask-app .
 
-      - name: Subir aplicação Flask na rede zap-net
+      - name: Rodar a aplicação Flask
         run: |
-          docker run --name flask-app --network zap-net -p 5000:5000 flask-app
+          docker run -d -p 5000:5000 my-flask-app
+          sleep 10  # Espera a aplicação levantar antes de rodar o ZAP
 
-      - name: Exibir logs do container Flask após criação
+      - name: Rodar OWASP ZAP
         run: |
-          echo "Exibindo logs do Flask..."
-          docker logs flask-app
+          docker pull owasp/zap2docker-stable
+          docker run -t owasp/zap2docker-stable zap-baseline.py -t http://localhost:5000 -g gen.conf -r zap_report.html
 
-      - name: Verificar se o Flask está respondendo
-        run: |
-          echo "Esperando o Flask responder..."
-          for i in {1..20}; do
-            if curl -s http://flask-app:5000 > /dev/null; then
-              echo "Flask está online!"
-              break
-            fi
-            echo "Tentativa $i falhou, tentando novamente..."
-            sleep 5
-          done
+      - name: Parar o container Flask
+        run: docker stop $(docker ps -q)
 
-      - name: Criar pasta de relatórios
-        run: mkdir -p zap_reports
-
-      - name: Ajustar permissões do diretório de relatórios
-        run: chmod -R 777 zap_reports
-
-      - name: Rodar ZAP apontando para o flask-app
-        run: |
-          flask_ip="flask-app"
-          echo "Rodando ZAP contra o Flask em http://$flask_ip:5000"
-          docker run --rm \
-            --network zap-net \
-            -v $(pwd)/zap_reports:/home/zap/:rw \
-            -v $(pwd)/zap_reports:/zap/wrk:rw \
-            ghcr.io/zaproxy/zaproxy:stable zap-baseline.py \
-            -t http://$flask_ip:5000 \
-            -J /home/zap/report_json.json \
-            -w /home/zap/report.md \
-            -r /home/zap/report.html
+      - name: Upload ZAP report
+        uses: actions/upload-artifact@v2
+        with:
+          name: zap-report
+          path: zap_report.html

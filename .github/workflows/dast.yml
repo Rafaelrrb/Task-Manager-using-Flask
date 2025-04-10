@@ -42,29 +42,11 @@ jobs:
             sleep 5
           done
 
-      - name: Criar pasta de relatórios
-        run: mkdir -p zap_reports
-
-      - name: Ajustar permissões do diretório de relatórios
-        run: chmod -R 777 zap_reports
-
-      - name: Rodar ZAP apontando para o flask-app
+      - name: Rodar ZAP e exibir resultados no terminal
         run: |
           flask_ip="flask-app"
           echo "Rodando ZAP contra o Flask em http://$flask_ip:5000"
           docker run --rm \
             --network zap-net \
-            -v $(pwd)/zap_reports:/home/zap/:rw \
-            -v $(pwd)/zap_reports:/zap/wrk:rw \
             ghcr.io/zaproxy/zaproxy:stable zap-baseline.py \
-            -t http://$flask_ip:5000 \
-            -J /home/zap/report_json.json \
-            -w /home/zap/report.md \
-            -r /home/zap/report.html || echo "ZAP encontrou problemas, veja o relatório para mais detalhes."
-
-      - name: Upload do Relatório como Artefato
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: zap-report
-          path: zap_reports
+            -t http://$flask_ip:5000 || echo "ZAP encontrou vulnerabilidades. Verifique o log acima."

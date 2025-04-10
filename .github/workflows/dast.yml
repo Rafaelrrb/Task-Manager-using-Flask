@@ -24,6 +24,9 @@ jobs:
         run: |
           docker run -d --name flask-app --network zap-net -p 5000:5000 flask-app
 
+      - name: Ver logs do Flask
+        run: docker logs flask-app
+
       - name: Verificar se o Flask está respondendo
         run: |
           echo "Esperando o Flask responder..."
@@ -35,7 +38,7 @@ jobs:
               echo "Flask está online!"
               break
             fi
-            echo "Tentativa $i falhou, esperando 5s..."
+            echo "Tentativa $i falhou, tentando novamente em 5s..."
             sleep 5
           done
 
@@ -47,19 +50,14 @@ jobs:
 
       - name: Rodar ZAP apontando para o flask-app
         run: |
-          echo "Rodando ZAP contra o Flask em http://flask-app:5000"
+          flask_ip="flask-app"
+          echo "Rodando ZAP contra o Flask em http://$flask_ip:5000"
           docker run --rm \
             --network zap-net \
             -v $(pwd)/zap_reports:/home/zap/:rw \
             -v $(pwd)/zap_reports:/zap/wrk:rw \
             ghcr.io/zaproxy/zaproxy:stable zap-baseline.py \
-            -t http://flask-app:5000 \
+            -t http://$flask_ip:5000 \
             -J /home/zap/report_json.json \
             -w /home/zap/report.md \
             -r /home/zap/report.html
-
-      - name: Upload dos relatórios como artefato
-        uses: actions/upload-artifact@v4
-        with:
-          name: zap-reports
-          path: zap_reports

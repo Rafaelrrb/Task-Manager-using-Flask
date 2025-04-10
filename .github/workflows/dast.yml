@@ -64,7 +64,7 @@ jobs:
 
       - name: Upload do Relatório como Artefato
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: zap-report
           path: zap_reports

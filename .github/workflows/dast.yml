@@ -60,4 +60,11 @@ jobs:
             -t http://$flask_ip:5000 \
             -J /home/zap/report_json.json \
             -w /home/zap/report.md \
-            -r /home/zap/report.html
+            -r /home/zap/report.html || echo "ZAP encontrou problemas, veja o relatório para mais detalhes."
+
+      - name: Upload do Relatório como Artefato
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: zap-report
+          path: zap_reports

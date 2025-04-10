@@ -7,34 +7,56 @@ on:
     branches: [main, develop, staging]
 
 jobs:
-  build-and-scan:
+  dast:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checar código do repositório
+      - name: Checkout do código
         uses: actions/checkout@v3
 
-      - name: Configurar Docker
-        run: sudo apt-get install docker.io
+      - name: Criar rede Docker
+        run: docker network create zap-net
 
-      - name: Build Docker image
-        run: docker build -t my-flask-app .
+      - name: Build da imagem Flask
+        run: docker build -t flask-app .
 
-      - name: Rodar a aplicação Flask
+      - name: Subir aplicação Flask na rede zap-net
         run: |
-          docker run -d -p 5000:5000 my-flask-app
-          sleep 10  # Espera a aplicação levantar antes de rodar o ZAP
+          docker run -d --name flask-app --network zap-net -p 5000:5000 flask-app
 
-      - name: Rodar OWASP ZAP
+      - name: Verificar se o Flask está respondendo
         run: |
-          docker pull owasp/zap2docker-stable
-          docker run -t owasp/zap2docker-stable zap-baseline.py -t http://localhost:5000 -g gen.conf -r zap_report.html
+          echo "Esperando o Flask responder..."
+          for i in {1..20}; do
+            if docker run --rm --network zap-net curlimages/curl:latest curl -s http://flask-app:5000 > /dev/null; then
+              echo "Flask está online!"
+              break
+            fi
+            echo "Tentativa $i falhou, tentando novamente..."
+            sleep 5
+          done
 
-      - name: Parar o container Flask
-        run: docker stop $(docker ps -q)
+      - name: Criar pasta de relatórios
+        run: mkdir -p zap_reports
 
-      - name: Upload ZAP report
-        uses: actions/upload-artifact@v2
+      - name: Ajustar permissões do diretório de relatórios
+        run: chmod -R 777 zap_reports
+
+      - name: Rodar ZAP apontando para o flask-app
+        run: |
+          echo "Rodando ZAP contra o Flask em http://flask-app:5000"
+          docker run --rm \
+            --network zap-net \
+            -v $(pwd)/zap_reports:/home/zap/:rw \
+            -v $(pwd)/zap_reports:/zap/wrk:rw \
+            ghcr.io/zaproxy/zaproxy:stable zap-baseline.py \
+            -t http://flask-app:5000 \
+            -J /home/zap/report_json.json \
+            -w /home/zap/report.md \
+            -r /home/zap/report.html
+
+      - name: Upload dos relatórios como artefato
+        uses: actions/upload-artifact@v4
         with:
-          name: zap-report
-          path: zap_report.html
+          name: zap-reports
+          path: zap_reports

@@ -28,11 +28,14 @@ jobs:
         run: |
           echo "Esperando o Flask responder..."
           for i in {1..20}; do
-            if docker run --rm --network zap-net curlimages/curl:latest curl -s http://flask-app:5000 > /dev/null; then
+            echo "Tentativa $i..."
+            docker run --rm --network zap-net curlimages/curl:latest \
+              curl -v --connect-timeout 5 http://flask-app:5000
+            if [ $? -eq 0 ]; then
               echo "Flask está online!"
               break
             fi
-            echo "Tentativa $i falhou, tentando novamente..."
+            echo "Tentativa $i falhou, esperando 5s..."
             sleep 5
           done
 
